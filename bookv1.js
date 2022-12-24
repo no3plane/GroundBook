@@ -1,6 +1,6 @@
-import {bookGround, getPeriods, getGrounds} from './service.js'
-import {selectGround, selectPeriod, readLine} from "./ui.js";
-import {getToken, getNextTwelvePm, sleep} from "./utils.js";
+import { bookGround, getPeriods, getGrounds } from './service.js'
+import { selectGround, selectPeriod, readLine } from "./ui.js";
+import { getToken, getNextTwelvePm, sleep } from "./utils.js";
 
 let token = getToken();
 

@@ -1,8 +1,7 @@
-import {getGrounds, getPeriods} from './service.js'
-import {getCsvColNames, getCsvHead, getCsvRow} from "./toCsv.js";
-import {getToken} from "./utils.js";
+import { getGrounds, getPeriods } from './service.js'
+import { getCsvColNames, getCsvHead, getCsvRow } from "./toCsv.js";
+import { getToken } from "./utils.js";
 import fs from "fs";
-
 
 try {
     const path = 'C:\\Users\\Solstice\\Downloads\\records.csv';

@@ -1,7 +1,7 @@
 import CryptoJS from "crypto-js";
 import fs from "fs";
 
-export {getToken, getTimestamp, calcTimestampSign, fillNumberByZero, formatDate, getNextTwelvePm, getTodayTwelvePm};
+export { getToken, getTimestamp, calcTimestampSign, fillNumberByZero, formatDate, getNextTwelvePm, getTodayTwelvePm };
 
 const TOKEN_FILE_PATH = 'C:\\tybToken.txt';
 
@@ -113,4 +113,4 @@ function sleep(ms) {
     });
 }
 
-export {sleep};
+export { sleep };

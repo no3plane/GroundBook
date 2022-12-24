@@ -1,6 +1,6 @@
-import {cancelBook, getPriLogs} from "./service.js";
-import {readLine} from "./ui.js";
-import {getToken} from "./utils.js";
+import { cancelBook, getPriLogs } from "./service.js";
+import { readLine } from "./ui.js";
+import { getToken } from "./utils.js";
 
 try {
     await listPriLogs();

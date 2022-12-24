@@ -1,5 +1,5 @@
 import Readline from "readline";
-import {GroundStatus, PeriodStatus} from "./utils.js";
+import { GroundStatus, PeriodStatus } from "./utils.js";
 
 function selectPeriod(periods, date = new Date()) {
     for (let period of periods) {
@@ -64,6 +64,6 @@ function readLine(message) {
     });
 }
 
-export {selectGround};
-export {selectPeriod};
-export {readLine};
+export { selectGround };
+export { selectPeriod };
+export { readLine };

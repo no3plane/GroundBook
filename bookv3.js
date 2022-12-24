@@ -1,7 +1,7 @@
-import {bookGround, getGrounds, getPeriods} from './service.js'
-import {getToken, getNextTwelvePm, GroundStatus, PeriodStatus, sleep, getTodayTwelvePm} from "./utils.js";
-import {getGroundNameById, getPeriodNameById, mapGroundId, mapPeriodId} from "./idData.js";
-import {readLine} from "./ui.js";
+import { bookGround, getGrounds, getPeriods } from './service.js'
+import { getToken, getNextTwelvePm, GroundStatus, PeriodStatus, sleep, getTodayTwelvePm } from "./utils.js";
+import { getGroundNameById, getPeriodNameById, mapGroundId, mapPeriodId } from "./idData.js";
+import { readLine } from "./ui.js";
 
 const periodIdRank = mapPeriodId([
     '15:00-16:00', '16:00-17:00', '17:00-18:00', '15:30-16:00',
@@ -97,7 +97,7 @@ async function waitUntilAnyoneBook(token, timeout) {
 }
 
 async function tryBookTheBestGround(time, token, periodIdRank, groundIdRank,
-                                    successCallback, failCallback) {
+    successCallback, failCallback) {
     const OFFSET_SECOND = 1;
     for (let i = 0; i < time; i++) {
         const bookableGround = await findBookableGround(token, periodIdRank, groundIdRank);

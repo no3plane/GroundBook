@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
-import {getTimestamp, calcTimestampSign, formatDate} from "./utils.js";
+import { getTimestamp, calcTimestampSign, formatDate } from "./utils.js";
 
-export {bookGround, getPeriods, getGrounds, cancelBook, getPriLogs};
+export { bookGround, getPeriods, getGrounds, cancelBook, getPriLogs };
 
 const ORIGIN = 'https://tyb.qingyou.ren';
 
@@ -39,10 +39,10 @@ function getPeriods(token, sportType = 1) {
     })
         .then(res => res.json())
         .then(res => {
-                return new Promise((resolve, reject) => {
-                    res.success ? resolve(res.data) : reject(res);
-                })
-            }
+            return new Promise((resolve, reject) => {
+                res.success ? resolve(res.data) : reject(res);
+            })
+        }
         );
 }
 
