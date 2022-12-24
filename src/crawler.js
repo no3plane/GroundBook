@@ -1,5 +1,4 @@
 import { getGrounds, getPeriods } from './service.js'
-import { getCsvColNames, getCsvHead, getCsvRow } from "./toCsv.js";
 import { getToken } from "./utils.js";
 import fs from "fs";
 
@@ -43,3 +42,23 @@ function saveRecords(records, path) {
     fs.writeFileSync(path, result);
 }
 
+
+function getCsvHead(obj) {
+    return Object.keys(obj).join(',') + ',';
+}
+
+function getCsvColNames(obj) {
+    return Object.keys(obj);
+}
+
+function getCsvRow(keys, obj) {
+    let result = '';
+    for (let key of keys) {
+        if (obj[key] === undefined) {
+            result += ',';
+        } else {
+            result += obj[key] + ',';
+        }
+    }
+    return result;
+}
