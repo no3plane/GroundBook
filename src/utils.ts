@@ -1,13 +1,12 @@
 import CryptoJS from "crypto-js";
 import fs from "fs";
-
-export { getToken, getTimestamp, calcTimestampSign, fillNumberByZero, formatDate, getNextTwelvePm, getTodayTwelvePm };
+import { Ground, Period } from "./entity/result.entity";
 
 const TOKEN_FILE_PATH = 'C:\\tybToken.txt';
 
-let tokenCache = null;
+let tokenCache: string | null = null;
 
-function getToken() {
+export function getToken(): string {
     if (tokenCache) {
         return tokenCache;
     } else {
@@ -15,11 +14,7 @@ function getToken() {
     }
 }
 
-function getTimestamp(date = new Date()) {
-    return date.getTime().toString();
-}
-
-function calcTimestampSign(timestamp) {
+export function calcTimestampSign(timestamp: string): string {
     const plainText = CryptoJS.enc.Utf8.parse(timestamp);
     const key = CryptoJS.enc.Utf8.parse("6f00cd9cade84e52");
 
@@ -32,23 +27,14 @@ function calcTimestampSign(timestamp) {
     return CryptoJS.enc.Base64.stringify(cipherTextObj.ciphertext);
 }
 
-function fillNumberByZero(number, newLength) {
-    let oldLength = number.toString().length;
-    let result = number.toString();
-    for (let i = 0; i < newLength - oldLength; i++) {
-        result = '0' + result;
-    }
-    return result;
-}
-
-function formatDate(date) {
+export function formatDate(date: Date): string {
     const year = date.getFullYear();
-    const month = fillNumberByZero(date.getMonth() + 1, 2);
-    const day = fillNumberByZero(date.getDate(), 2);
+    const month = date.getMonth() < 9 ? ('0' + (date.getMonth() + 1)) : (date.getMonth() + 1); // 如果是个位数前面要补0
+    const day = date.getDate() < 10 ? ('0' + date.getDate()) : date.getDate();
     return `${year}-${month}-${day}`;
 }
 
-function getNextTwelvePm() {
+export function getNextTwelvePm(): Date {
     const twelvePM = new Date();
     twelvePM.setHours(12, 0, 0, 0);
     if (new Date() >= twelvePM) {
@@ -58,7 +44,7 @@ function getNextTwelvePm() {
     return twelvePM;
 }
 
-function getTodayTwelvePm() {
+export function getTodayTwelvePm(): Date {
     const twelvePM = new Date();
     twelvePM.setHours(12, 0, 0, 0);
     return twelvePM;
@@ -68,7 +54,7 @@ export class PeriodStatus {
     static PERIOD_OPEN = 1;
     static PERIOD_CLOSE = 0;
 
-    static read(period, date) {
+    static read(period: Period, date: Date) {
         if (period.dateType[date.getDay()] === true) {
             return PeriodStatus.PERIOD_OPEN;
         }
@@ -81,7 +67,7 @@ export class GroundStatus {
     static USER_BOOK = 1;
     static ADMIN_BOOK = 2;
 
-    static read(ground) {
+    static read(ground: Ground) {
         if (!ground.log) {
             return GroundStatus.BOOKABLE;
         }
@@ -94,23 +80,21 @@ export class GroundStatus {
         return -1;
     }
 
-    static isBookable(ground) {
+    static isBookable(ground: Ground) {
         return this.read(ground) === this.BOOKABLE;
     }
 
-    static isUserBook(ground) {
+    static isUserBook(ground: Ground) {
         return this.read(ground) === this.USER_BOOK;
     }
 
-    static isAdminBook(ground) {
+    static isAdminBook(ground: Ground) {
         return this.read(ground) === this.ADMIN_BOOK;
     }
 }
 
-function sleep(ms) {
+export function sleep(ms: number): Promise<void> {
     return new Promise(resolve => {
         setTimeout(resolve, ms);
     });
 }
-
-export { sleep };

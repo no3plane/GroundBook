@@ -1,30 +1,11 @@
 import { bookGround, getGrounds, getPeriods } from './service.js'
-import { getToken, getNextTwelvePm, GroundStatus, PeriodStatus, sleep, getTodayTwelvePm } from "./utils.js";
-import { getGroundNameById, getPeriodNameById, mapGroundId, mapPeriodId } from "./idData.js";
-import { readLine } from "./ui.js";
+import { getNextTwelvePm, GroundStatus, PeriodStatus, sleep, getTodayTwelvePm } from "./utils.js";
+import { getGroundNameById, getPeriodNameById } from "./id.js";
+import { ResponseData, Ground, Period } from './entity/result.entity.js';
 
-const periodIdRank = mapPeriodId([
-    '15:00-16:00', '16:00-17:00', '17:00-18:00', '15:30-16:00',
-    '19:00-20:00', '20:00-21:00', '18:00-19:00']);
-const groundIdRank = mapGroundId([
-    '三牌楼3号', '三牌楼4号', '三牌楼2号',
-    '三牌楼1号', '三牌楼5号', '三牌楼6号',]);
-// groundIdRank.push(15);
-
-try {
-    const select = await readLine('1：预约 2：查看剩余可预约场地\n请选择：');
-    if (select === '1') {
-        await book(getToken(), periodIdRank, groundIdRank, 2);
-    } else {
-        await printBookableGrounds(getToken());
-    }
-} catch (e) {
-    console.log(e);
-}
-
-async function book(token, periodIdRank, groundIdRank, bookGroundCount = 1) {
-    if (!await checkTokenValidity(token)) {
-        console.log('Token错误');
+export async function book(token: string, periodIdRank: Array<number>, groundIdRank: Array<number>, bookGroundCount: number = 1) {
+    if (!await checkTokenAvailable(token)) {
+        console.log('Token无效');
         return;
     }
 
@@ -39,9 +20,9 @@ async function book(token, periodIdRank, groundIdRank, bookGroundCount = 1) {
 
     const pendingPeriodIdRank = [...periodIdRank];
     for (let i = 0; i < bookGroundCount; i++) {
-        let successfulGround = null;
+        let successfulGround: ResponseData<Ground> = null;
 
-        const bookSuccessCallback = successGround => {
+        const bookSuccessCallback = (successGround: ResponseData<Ground>) => {
             successfulGround = successGround;
             console.log(
                 '预约成功：%s\t%s',
@@ -49,7 +30,7 @@ async function book(token, periodIdRank, groundIdRank, bookGroundCount = 1) {
                 getGroundNameById(successGround.data.log.stadiumId),
             );
         }
-        const bookFailCallback = failGround => {
+        const bookFailCallback = (failGround: ResponseData<Ground> | ResponseData<null>) => {
             // TODO 黑名单机制，如果一个失败了，之后就不要再试了！
             const periodName = failGround?.data?.log ? getPeriodNameById(failGround?.data?.log?.periodId) : null;
             const groundName = failGround?.data?.log ? getGroundNameById(failGround?.data?.log?.stadiumId) : null;
@@ -66,38 +47,38 @@ async function book(token, periodIdRank, groundIdRank, bookGroundCount = 1) {
     }
 }
 
-async function checkTokenValidity(token) {
+async function checkTokenAvailable(token: string): Promise<boolean> {
     try {
         await getPeriods(token);
     } catch (res) {
-        if (res.errMsg === '请先登录') {
+        if ((res as ResponseData<unknown>).errMsg === '请先登录') {
             return false;
         }
     }
     return true;
 }
 
-async function waitUntilTwelve(offset = 0) {
+async function waitUntilTwelve(offset: number = 0): Promise<void> {
     const twelvePm = getNextTwelvePm();
-    const countDown = twelvePm - new Date();
+    const countDown = +twelvePm - +new Date();
     if (countDown > 2000) {
         await sleep(countDown - 2000);
     }
-    while (+twelvePm + offset > new Date()) {
+    while (+twelvePm + offset > +new Date()) {
     }
 }
 
-async function waitUntilAnyoneBook(token, timeout) {
+async function waitUntilAnyoneBook(token: string, timeout: number): Promise<number> {
     let checkCount = 0;
     const expire = +new Date() + timeout;
-    while ((!await hasAnyoneBook(token)) && (new Date() < expire)) {
+    while ((!await hasAnyoneBook(token)) && (+new Date() < expire)) {
         checkCount++;
     }
     return ++checkCount;
 }
 
-async function tryBookTheBestGround(time, token, periodIdRank, groundIdRank,
-    successCallback, failCallback) {
+async function tryBookTheBestGround(time: number, token: string, periodIdRank: Array<number>, groundIdRank: Array<number>,
+    successCallback: Function, failCallback: Function): Promise<boolean> {
     const OFFSET_SECOND = 1;
     for (let i = 0; i < time; i++) {
         const bookableGround = await findBookableGround(token, periodIdRank, groundIdRank);
@@ -120,7 +101,7 @@ async function tryBookTheBestGround(time, token, periodIdRank, groundIdRank,
     return false;
 }
 
-async function printBookableGrounds(token) {
+export async function printBookableGrounds(token: string): Promise<void> {
     const bookableGrounds = await findBookableGrounds(token, [21, 22, 2, 3, 4, 5, 6], [5, 6, 7, 8, 13, 14, 15, 1, 2, 3, 4]);
     console.log(`可以预约的场地个数：${bookableGrounds.length}`);
     for (const ground of bookableGrounds) {
@@ -131,7 +112,7 @@ async function printBookableGrounds(token) {
 /*
     按指定优先级找到第一个可以被预约的场地
  */
-async function findBookableGround(token, periodIdRank, groundIdRank) {
+async function findBookableGround(token: string, periodIdRank: Array<number>, groundIdRank: Array<number>): Promise<Ground | null> {
     const date = new Date();
     const periods = await getPeriods(token);
     for (const periodId of periodIdRank) {
@@ -156,13 +137,13 @@ async function findBookableGround(token, periodIdRank, groundIdRank) {
     按指定优先级找到所有可以被预约的场地
     （尝试使用函数式编程书写此函数）
  */
-async function findBookableGrounds(token, periodIdRank, groundIdRank) {
+async function findBookableGrounds(token: string, periodIdRank: Array<number>, groundIdRank: Array<number>): Promise<Array<Ground>> {
     const date = new Date();
 
     /* 将对象数组objs按照指定属性attrName的值排序
        顺序来源于给定属性数组attrValueRank
        且筛选掉不attrOrderList.include(obj[attrName])的对象 */
-    const rankObjsByAttr = (objs, attrName, attrValueRank) =>
+    const rankObjsByAttr = (objs: Array<object>, attrName: string, attrValueRank: Array<any>) =>
         attrValueRank.reduce((resultArray, currentAttr) => {
             const obj = objs.find(obj => obj[attrName] === currentAttr);
             if (obj) {
@@ -176,7 +157,7 @@ async function findBookableGrounds(token, periodIdRank, groundIdRank) {
     const rankedPeriods = rankObjsByAttr(openPeriods, 'id', periodIdRank);
 
     const groundsGroupByPeriod = await Promise.all(
-        rankedPeriods.map(async period => {
+        rankedPeriods.map(async (period: Period) => {
             const grounds = await getGrounds(token, date, period.id);
             grounds.forEach(ground => ground.period = period);
             return grounds;
@@ -193,7 +174,7 @@ async function findBookableGrounds(token, periodIdRank, groundIdRank) {
 }
 
 
-async function hasAnyoneBook(token) {
+async function hasAnyoneBook(token: string): Promise<boolean | Ground> {
     const date = new Date();
 
     for (const period of await getPeriods(token)) {

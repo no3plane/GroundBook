@@ -1,7 +1,8 @@
 import Readline from "readline";
+import { Ground, Period } from "./entity/result.entity.js";
 import { GroundStatus, PeriodStatus } from "./utils.js";
 
-function selectPeriod(periods, date = new Date()) {
+export function selectPeriod(periods: Array<Period>, date: Date = new Date()): Promise<Period> {
     for (let period of periods) {
         let note = PeriodStatus.read(period, date) === PeriodStatus.PERIOD_OPEN ? '' : '（时间段已关闭）';
         console.log(`id: %s\t period: %s - %s%s`,
@@ -26,7 +27,7 @@ function selectPeriod(periods, date = new Date()) {
 }
 
 
-function selectGround(grounds) {
+export function selectGround(grounds: Array<Ground>): Promise<Ground> {
     for (let ground of grounds) {
         let line = `id: ${ground.id}\t name: ${ground.name}`;
         const groundStatus = GroundStatus.read(ground);
@@ -51,7 +52,7 @@ function selectGround(grounds) {
         });
 }
 
-function readLine(message) {
+export function readLine(message: string): Promise<string> {
     return new Promise(resolve => {
         const reader = Readline.createInterface({
             input: process.stdin,
@@ -63,7 +64,3 @@ function readLine(message) {
         });
     });
 }
-
-export { selectGround };
-export { selectPeriod };
-export { readLine };

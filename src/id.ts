@@ -1,4 +1,9 @@
-const groundIdMap = [
+interface IdMap {
+    id: number;
+    name: string;
+}
+
+const groundIdMap: Array<IdMap> = [
     { id: 1, name: '仙林1号' },
     { id: 2, name: '仙林2号' },
     { id: 3, name: '仙林3号' },
@@ -12,7 +17,7 @@ const groundIdMap = [
     { id: 15, name: '场地不可用' }
 ];
 
-const periodIdMap = [
+const periodIdMap: Array<IdMap> = [
     { id: 21, name: '15:30-16:00' },
     { id: 22, name: '15:00-16:00' },
     { id: 2, name: '16:00-17:00' },
@@ -22,7 +27,7 @@ const periodIdMap = [
     { id: 6, name: '20:00-21:00' },
 ]
 
-function rankObjsByAttr(objs, attrName, attrValueRank) {
+function rankObjsByAttr<T>(objs: Array<T>, attrName: string, attrValueRank: Array<any>): Array<T> {
     const map = new Map();
     for (const obj of objs) {
         map.set(obj[attrName], obj);
@@ -34,20 +39,20 @@ function rankObjsByAttr(objs, attrName, attrValueRank) {
     return result;
 }
 
-export function mapGroundId(groundNames) {
+export function mapGroundId(groundNames: Array<string>): Array<number> {
     const rankedGroundIdMap = rankObjsByAttr(groundIdMap, 'name', groundNames);
     return rankedGroundIdMap.map(value => value.id);
 }
 
-export function mapPeriodId(periodNames) {
+export function mapPeriodId(periodNames: Array<string>): Array<number> {
     const rankedPeriodIdMap = rankObjsByAttr(periodIdMap, 'name', periodNames);
     return rankedPeriodIdMap.map(value => value.id);
 }
 
-export function getGroundNameById(id) {
-    return groundIdMap.find(ground => ground.id === id).name;
+export function getGroundNameById(id: number) {
+    return groundIdMap.find(ground => ground.id === id)?.name;
 }
 
-export function getPeriodNameById(id) {
-    return periodIdMap.find(peroid => peroid.id === id).name;
+export function getPeriodNameById(id: number) {
+    return periodIdMap.find(peroid => peroid.id === id)?.name;
 }

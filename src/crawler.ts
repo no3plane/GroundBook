@@ -1,6 +1,7 @@
 import { getGrounds, getPeriods } from './service.js'
 import { getToken } from "./utils.js";
 import fs from "fs";
+import { GroundLog } from './entity/result.entity.js';
 
 try {
     const path = 'C:\\Users\\Solstice\\Downloads\\records.csv';
@@ -13,7 +14,8 @@ try {
     console.log(e);
 }
 
-async function fetchRecords(token, startDate, endDate) {
+
+async function fetchRecords(token: string, startDate: Date, endDate: Date): Promise<Array<GroundLog>> {
     let records = [];
     const periods = await getPeriods(token);
     const currentDate = new Date(startDate);
@@ -33,7 +35,7 @@ async function fetchRecords(token, startDate, endDate) {
     return records;
 }
 
-function saveRecords(records, path) {
+function saveRecords(records: Array<GroundLog>, path: string): void {
     let result = getCsvHead(records[0]) + '\n';
     const colNames = getCsvColNames(records[0]);
     for (let record of records) {
@@ -43,15 +45,15 @@ function saveRecords(records, path) {
 }
 
 
-function getCsvHead(obj) {
+function getCsvHead(obj: object): string {
     return Object.keys(obj).join(',') + ',';
 }
 
-function getCsvColNames(obj) {
+function getCsvColNames(obj: object): string[] {
     return Object.keys(obj);
 }
 
-function getCsvRow(keys, obj) {
+function getCsvRow(keys: Array<string>, obj: object) {
     let result = '';
     for (let key of keys) {
         if (obj[key] === undefined) {
