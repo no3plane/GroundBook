@@ -1,4 +1,4 @@
-import { bookGround, getGrounds, getPeriods } from './service.js'
+import { bookGround, getGrounds, getPeriods } from './api.js'
 import { getNextTwelvePm, GroundStatus, PeriodStatus, sleep, getTodayTwelvePm } from "./utils.js";
 import { getGroundNameById, getPeriodNameById } from "./id.js";
 import { ResponseData, Ground, Period } from './entity/result.entity.js';

@@ -1,4 +1,4 @@
-import { getGrounds, getPeriods } from './service.js'
+import { getGrounds, getPeriods } from './api.js'
 import { getToken } from "./utils.js";
 import fs from "fs";
 import { GroundLog } from './entity/result.entity.js';

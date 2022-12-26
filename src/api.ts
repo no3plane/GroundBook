@@ -1,51 +1,47 @@
 import fetch from "node-fetch";
-import { calcTimestampSign, formatDate, GroundStatus } from "./utils";
+import CryptoJS from "crypto-js";
 import { ResponseData, Ground, Period } from "./entity/result.entity"
-
-export { bookGround, getPeriods, getGrounds, cancelBook, getPriLogs };
 
 const ORIGIN = 'https://tyb.qingyou.ren';
 
-async function bookGround(token: string, periodId: number, stadiumId: number, date: Date) {
-    const url = ORIGIN + '/user/book/';
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: {
+export async function bookGround(token: string, periodId: number, stadiumId: number, date: Date) {
+    const result = await fetchJSON(
+        'POST', ORIGIN + '/user/book/',
+        {
             "Content-Type": "application/json",
             token: token,
             resultJSON: date.getTime().toString(),
             resultJSONSignature: calcTimestampSign(date.getTime().toString())
         },
-        body: JSON.stringify({
+        {
             periodId: periodId,
             date: formatDate(date),
             stadiumId: stadiumId
-        }),
-    });
-    const result = await response.json();
-    return new Promise((resolve, reject) => {
-        (result as ResponseData<any>).success ? resolve(result) : reject(result);
-    })
+        }
+    );
+    if (result.success) {
+        return result;
+    }
+    throw new Error(result.errMsg);
 }
 
-async function getPeriods(token: string, sportType = 1): Promise<Array<Period>> {
+export async function getPeriods(token: string, sportType = 1): Promise<Array<Period>> {
     const url = ORIGIN + '/user/getPeriods/?sportType=' + sportType;
-    const response = await fetch(url, {
+    const result = await fetch(url, {
         method: 'GET',
         headers: {
             token: token,
         }
-    });
-    const result = await response.json();
+    }).then(res => res.json());
     return new Promise((resolve, reject) => {
         (result as ResponseData<any>).success ? resolve((result as ResponseData<any>).data) : reject(result);
     })
 }
 
-async function getGrounds(token: string, date: Date, periodId: number): Promise<Array<Ground>> {
+export async function getGrounds(token: string, date: Date, periodId: number): Promise<Array<Ground>> {
     const today = formatDate(date);
     const url = ORIGIN + `/user/getPubLogs/?date=${today}&periodId=${periodId}`;
-    const response = await fetch(url, {
+    const result = await fetch(url, {
         method: 'POST',
         headers: {
             "Content-Type": "application/json",
@@ -55,32 +51,30 @@ async function getGrounds(token: string, date: Date, periodId: number): Promise<
             date: today,
             periodId: +periodId,
         })
-    })
-    const result = await response.json();
+    }).then(res => res.json());
     return new Promise((resolve, reject) => {
         (result as ResponseData<any>).success ? resolve((result as ResponseData<any>).data) : reject(result);
     })
 }
 
-async function cancelBook(token: string, logId: number) {
+export async function cancelBook(token: string, logId: number) {
     const url = ORIGIN + '/user/cancel';
-    const response = await fetch(url, {
+    const result = await fetch(url, {
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             token: token
         },
         body: `logId=${logId}`
-    });
-    const result = await response.json();
+    }).then(res => res.json());
     return new Promise((resolve, reject) => {
         (result as ResponseData<any>).success ? resolve(result) : reject(result);
     })
 }
 
-async function getPriLogs(token: string, containCanceled: boolean, desc: boolean, limit: number, offset: number) {
+export async function getPriLogs(token: string, containCanceled: boolean, desc: boolean, limit: number, offset: number) {
     const url = ORIGIN + '/user/getPriLogs';
-    const response = await fetch(url, {
+    const result = await fetch(url, {
         method: 'POST',
         headers: {
             "Content-Type": "application/json",
@@ -92,9 +86,38 @@ async function getPriLogs(token: string, containCanceled: boolean, desc: boolean
             limit: limit,
             offset: offset
         })
-    });
-    const result = await response.json();
+    }).then(res => res.json());
     return new Promise((resolve, reject) => {
         (result as ResponseData<any>).success ? resolve((result as ResponseData<any>).data) : reject(result);
     })
+}
+
+function calcTimestampSign(timestamp: string): string {
+    const plainText = CryptoJS.enc.Utf8.parse(timestamp);
+    const key = CryptoJS.enc.Utf8.parse("6f00cd9cade84e52");
+
+    const cipherTextObj = CryptoJS.AES.encrypt(plainText, key, {
+        iv: CryptoJS.enc.Utf8.parse("25d82196341548ef"),
+        mode: CryptoJS.mode.CBC,
+        padding: CryptoJS.pad.Pkcs7
+    });
+
+    return CryptoJS.enc.Base64.stringify(cipherTextObj.ciphertext);
+}
+
+function formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = date.getMonth() < 9 ? ('0' + (date.getMonth() + 1)) : (date.getMonth() + 1); // 如果是个位数前面要补0
+    const day = date.getDate() < 10 ? ('0' + date.getDate()) : date.getDate();
+    return `${year}-${month}-${day}`;
+}
+
+async function fetchJSON(method: string, url: string, headers: HeadersInit, body: object) {
+    const response = await fetch(url, {
+        method: method,
+        headers: headers,
+        body: JSON.stringify(body),
+    })
+    const result = await response.json();
+    return result as ResponseData<unknown>;
 }

@@ -1,4 +1,4 @@
-import { cancelBook, getPriLogs } from "./service.js";
+import { cancelBook, getPriLogs } from "./api.js";
 import { readLine } from "./ui.js";
 import { getToken } from "./utils.js";
 

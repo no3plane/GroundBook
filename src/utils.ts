@@ -1,4 +1,3 @@
-import CryptoJS from "crypto-js";
 import fs from "fs";
 import { Ground, Period } from "./entity/result.entity";
 
@@ -12,26 +11,6 @@ export function getToken(): string {
     } else {
         return tokenCache = fs.readFileSync(TOKEN_FILE_PATH).toString();
     }
-}
-
-export function calcTimestampSign(timestamp: string): string {
-    const plainText = CryptoJS.enc.Utf8.parse(timestamp);
-    const key = CryptoJS.enc.Utf8.parse("6f00cd9cade84e52");
-
-    const cipherTextObj = CryptoJS.AES.encrypt(plainText, key, {
-        iv: CryptoJS.enc.Utf8.parse("25d82196341548ef"),
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-    });
-
-    return CryptoJS.enc.Base64.stringify(cipherTextObj.ciphertext);
-}
-
-export function formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = date.getMonth() < 9 ? ('0' + (date.getMonth() + 1)) : (date.getMonth() + 1); // 如果是个位数前面要补0
-    const day = date.getDate() < 10 ? ('0' + date.getDate()) : date.getDate();
-    return `${year}-${month}-${day}`;
 }
 
 export function getNextTwelvePm(): Date {
