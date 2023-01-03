@@ -64,3 +64,53 @@ function getCsvRow(keys: Array<string>, obj: object) {
     }
     return result;
 }
+
+export async function printBookableGrounds(token: string): Promise<void> {
+    const bookableGrounds = await findBookableGrounds(token, [21, 22, 2, 3, 4, 5, 6], [5, 6, 7, 8, 13, 14, 15, 1, 2, 3, 4]);
+    console.log(`可以预约的场地个数：${bookableGrounds.length}`);
+    for (const ground of bookableGrounds) {
+        console.log('%s-%s\t%s', ground.period.start, ground.period.end, ground.name);
+    }
+}
+
+
+/*
+    按指定优先级找到所有可以被预约的场地
+    （尝试使用函数式编程书写此函数）
+ */
+async function findBookableGrounds(token: string, periodIdRank: Array<number>, groundIdRank: Array<number>): Promise<Array<Ground>> {
+    const date = new Date();
+
+    /* 将对象数组objs按照指定属性attrName的值排序
+       顺序来源于给定属性数组attrValueRank
+       且筛选掉不attrOrderList.include(obj[attrName])的对象 */
+    const rankObjsByAttr = (objs: Array<object>, attrName: string, attrValueRank: Array<any>) =>
+        attrValueRank.reduce((resultArray, currentAttr) => {
+            const obj = objs.find(obj => obj[attrName] === currentAttr);
+            if (obj) {
+                resultArray.push(obj);
+            }
+            return resultArray;
+        }, []);
+
+    const periods = await getPeriods(token);
+    const openPeriods = periods.filter(period => PeriodStatus.read(period, date) === PeriodStatus.PERIOD_OPEN);
+    const rankedPeriods = rankObjsByAttr(openPeriods, 'id', periodIdRank);
+
+    const groundsGroupByPeriod = await Promise.all(
+        rankedPeriods.map(async (period: Period) => {
+            const grounds = await getGrounds(token, date, period.id);
+            grounds.forEach(ground => ground.period = period);
+            return grounds;
+        })
+    );
+
+    const rankedGroundsGroupByPeriod = groundsGroupByPeriod.map(
+        groundGroup => rankObjsByAttr(groundGroup, 'id', groundIdRank)
+    );
+
+    return []
+        .concat(...rankedGroundsGroupByPeriod)
+        .filter(ground => GroundStatus.read(ground) === GroundStatus.BOOKABLE);
+}
+

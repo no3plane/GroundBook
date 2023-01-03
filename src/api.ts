@@ -1,95 +1,111 @@
 import fetch from "node-fetch";
 import CryptoJS from "crypto-js";
-import { ResponseData, Ground, Period } from "./entity/result.entity"
+import Period from "./entity/Period.js";
+import ResponseData from "./entity/ResponseData.js";
+import Ground from "./entity/Ground.js";
+import { plainToClass, plainToInstance } from "class-transformer";
 
 const ORIGIN = 'https://tyb.qingyou.ren';
 
-export async function bookGround(token: string, periodId: number, stadiumId: number, date: Date) {
-    const result = await fetchJSON(
-        'POST', ORIGIN + '/user/book/',
-        {
-            "Content-Type": "application/json",
-            token: token,
-            resultJSON: date.getTime().toString(),
-            resultJSONSignature: calcTimestampSign(date.getTime().toString())
-        },
-        {
-            periodId: periodId,
-            date: formatDate(date),
-            stadiumId: stadiumId
-        }
-    );
-    if (result.success) {
-        return result;
-    }
-    throw new Error(result.errMsg);
+type bookGroundOptions = {
+    periodId: number,
+    stadiumId: number,
+    date: Date
+};
+
+type getPeriodsOptions = {
+    containCanceled: boolean,
+    desc: boolean,
+    limit: number,
+    offset: number
 }
 
-export async function getPeriods(token: string, sportType = 1): Promise<Array<Period>> {
-    const url = ORIGIN + '/user/getPeriods/?sportType=' + sportType;
-    const result = await fetch(url, {
+export const enum SportType {
+    badminton = 1
+}
+
+export async function bookGround(token: string, options: bookGroundOptions) {
+    const result = await fetchJSON({
+        method: 'POST',
+        url: ORIGIN + '/user/book/',
+        headers: {
+            "Content-Type": "application/json",
+            token: token,
+            resultJSON: options.date.getTime().toString(),
+            resultJSONSignature: calcTimestampSign(options.date.getTime().toString())
+        },
+        body: {
+            periodId: options.periodId,
+            date: formatDate(options.date),
+            stadiumId: options.stadiumId
+        }
+    })
+    result.data = plainToClass(Ground, result.data);
+    return result as ResponseData<Ground>;
+}
+
+export async function getPeriods(token: string, sportType: SportType = SportType.badminton) {
+    const result = await fetchJSON({
         method: 'GET',
+        url: ORIGIN + '/user/getPeriods/?sportType=' + sportType,
         headers: {
             token: token,
         }
-    }).then(res => res.json());
-    return new Promise((resolve, reject) => {
-        (result as ResponseData<any>).success ? resolve((result as ResponseData<any>).data) : reject(result);
     })
+    result.data = plainToInstance(Period, result.data);
+    return result as ResponseData<Period[]>;
 }
 
-export async function getGrounds(token: string, date: Date, periodId: number): Promise<Array<Ground>> {
+export async function getGrounds(token: string, periodId: number, date: Date) {
     const today = formatDate(date);
-    const url = ORIGIN + `/user/getPubLogs/?date=${today}&periodId=${periodId}`;
-    const result = await fetch(url, {
+    const result = await fetchJSON({
         method: 'POST',
+        url: ORIGIN + `/user/getPubLogs/?date=${today}&periodId=${periodId}`,
         headers: {
             "Content-Type": "application/json",
             token: token
         },
-        body: JSON.stringify({
+        body: {
             date: today,
             periodId: +periodId,
-        })
-    }).then(res => res.json());
-    return new Promise((resolve, reject) => {
-        (result as ResponseData<any>).success ? resolve((result as ResponseData<any>).data) : reject(result);
+        }
     })
+    result.data = plainToInstance(Ground, result.data);
+    return result as ResponseData<Ground[]>
 }
 
 export async function cancelBook(token: string, logId: number) {
-    const url = ORIGIN + '/user/cancel';
-    const result = await fetch(url, {
+    const response = await fetch(
+        ORIGIN + '/user/cancel', {
         method: 'POST',
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             token: token
         },
         body: `logId=${logId}`
-    }).then(res => res.json());
-    return new Promise((resolve, reject) => {
-        (result as ResponseData<any>).success ? resolve(result) : reject(result);
-    })
+    });
+    const result = await response.json() as ResponseData<unknown>;
+    // TODO result.data = plainToClass(xx, xxx);
+    return result as ResponseData<unknown>;
 }
 
-export async function getPriLogs(token: string, containCanceled: boolean, desc: boolean, limit: number, offset: number) {
-    const url = ORIGIN + '/user/getPriLogs';
-    const result = await fetch(url, {
+export async function getPriLogs(token: string, options: getPeriodsOptions) {
+    const result = await fetchJSON({
         method: 'POST',
+        url: ORIGIN + '/user/getPriLogs',
         headers: {
             "Content-Type": "application/json",
             token: token
         },
-        body: JSON.stringify({
-            containCanceled: containCanceled,
-            desc: desc,
-            limit: limit,
-            offset: offset
-        })
-    }).then(res => res.json());
-    return new Promise((resolve, reject) => {
-        (result as ResponseData<any>).success ? resolve((result as ResponseData<any>).data) : reject(result);
+        body: {
+            containCanceled: options.containCanceled,
+            desc: options.desc,
+            limit: options.limit,
+            offset: options.offset
+        }
     })
+    // TODO result.data = plainToInstance(xx, xxx);
+    return result as ResponseData<unknown>;
 }
 
 function calcTimestampSign(timestamp: string): string {
@@ -112,12 +128,18 @@ function formatDate(date: Date): string {
     return `${year}-${month}-${day}`;
 }
 
-async function fetchJSON(method: string, url: string, headers: HeadersInit, body: object) {
-    const response = await fetch(url, {
-        method: method,
-        headers: headers,
-        body: JSON.stringify(body),
+type RequestOptions = {
+    method: 'GET' | 'POST',
+    url: string,
+    headers: HeadersInit,
+    body?: object
+};
+
+async function fetchJSON(options: RequestOptions) {
+    const response = await fetch(options.url, {
+        method: options.method,
+        headers: options.headers,
+        body: JSON.stringify(options.body),
     })
-    const result = await response.json();
-    return result as ResponseData<unknown>;
+    return (await response.json()) as ResponseData<unknown>;
 }

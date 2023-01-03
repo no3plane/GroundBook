@@ -1,10 +1,10 @@
 import Readline from "readline";
-import { Ground, Period } from "./entity/result.entity.js";
-import { GroundStatus, PeriodStatus } from "./utils.js";
+import Period from "./entity/Period.js";
+import Ground from "./entity/Ground.js";
 
-export function selectPeriod(periods: Array<Period>, date: Date = new Date()): Promise<Period> {
+export function selectPeriod(periods: Array<Period>, date: Date = new Date()) {
     for (let period of periods) {
-        let note = PeriodStatus.read(period, date) === PeriodStatus.PERIOD_OPEN ? '' : '（时间段已关闭）';
+        let note = period.isOpen() ? '' : '（时间段已关闭）';
         console.log(`id: %s\t period: %s - %s%s`,
             period.id,
             period.start.slice(0, -3),
@@ -16,7 +16,7 @@ export function selectPeriod(periods: Array<Period>, date: Date = new Date()): P
         .then(id => {
             for (let period of periods) {
                 if (period.id === +id) {
-                    if (PeriodStatus.read(period, date) === PeriodStatus.PERIOD_CLOSE) {
+                    if (period.isClosed()) {
                         throw new Error('时间段已关闭');
                     }
                     return period;
@@ -27,13 +27,12 @@ export function selectPeriod(periods: Array<Period>, date: Date = new Date()): P
 }
 
 
-export function selectGround(grounds: Array<Ground>): Promise<Ground> {
+export function selectGround(grounds: Array<Ground>) {
     for (let ground of grounds) {
         let line = `id: ${ground.id}\t name: ${ground.name}`;
-        const groundStatus = GroundStatus.read(ground);
-        if (groundStatus === GroundStatus.ADMIN_BOOK) {
+        if (ground.isAdminBooked()) {
             line += '（已被管理员占用）';
-        } else if (groundStatus === GroundStatus.USER_BOOK) {
+        } else if (ground.isUserBooked()) {
             line += '（已被预约）';
         }
         console.log(line);
@@ -42,7 +41,7 @@ export function selectGround(grounds: Array<Ground>): Promise<Ground> {
         .then(id => {
             for (let ground of grounds) {
                 if (ground.id === +id) {
-                    if (GroundStatus.read(ground) !== GroundStatus.BOOKABLE) {
+                    if (!ground.isBookable()) {
                         throw new Error(`场地已被预约或被占用`);
                     }
                     return ground;
