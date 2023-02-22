@@ -66,7 +66,7 @@ export default class Booker {
     }
 
     private generateBookTimestamp() {
-        const TIMESTAMP_OFFSET: number = 1;
+        const TIMESTAMP_OFFSET: number = 0;
         const timestamp = new Date();
         timestamp.setSeconds(timestamp.getSeconds() + TIMESTAMP_OFFSET); // 发送的时间戳延后一秒，防止“预约未开放”
         return timestamp;
@@ -83,6 +83,7 @@ export default class Booker {
                 .filter(ground => ground.isBookable());
 
             if (rankedGrounds.length !== 0) {
+                rankedGrounds[0].period = period;
                 return rankedGrounds[0];
             }
         }

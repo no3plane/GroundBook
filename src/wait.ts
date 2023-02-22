@@ -1,5 +1,5 @@
-import { getGrounds, getPeriods } from "./api";
-import { sleep, getToken } from "./utils";
+import { getGrounds, getPeriods } from "./api.js";
+import { sleep, getToken } from "./utils.js";
 
 export async function waitUntilBookAvailable() {
     if (new Date() < getTodayTwelvePm()) {

@@ -1,5 +1,5 @@
 import fs from "fs";
-import { getPeriods } from "./api.js";
+// import { getPeriods } from "./api.js";
 
 const TOKEN_FILE_PATH = 'C:\\tybToken.txt';
 
@@ -13,16 +13,16 @@ export function getToken(): string {
     }
 }
 
-export async function checkTokenValidity(token: string = getToken()) {
-    const result = await getPeriods(token);
-    if (result.errMsg === '请先登录') {
-        return false;
-    }
-    if (!result.success) {
-        throw new Error("检测Token有效性时，响应了未知的结果");
-    }
-    return true;
-}
+// export async function checkTokenValidity(token: string = getToken()) {
+//     const result = await getPeriods(token);
+//     if (result.errMsg === '请先登录') {
+//         return false;
+//     }
+//     if (!result.success) {
+//         throw new Error("检测Token有效性时，响应了未知的结果");
+//     }
+//     return true;
+// }
 
 export function sleep(ms: number): Promise<void> {
     return new Promise(resolve => {

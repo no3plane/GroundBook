@@ -1,4 +1,4 @@
-import { sortBySpecifiedFieldOrder } from "../utils";
+import { sortBySpecifiedFieldOrder } from "../utils.js";
 
 export default class Period {
     public id: number;

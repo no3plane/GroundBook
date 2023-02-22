@@ -11,14 +11,18 @@ async function main() {
     }
 
     console.log('等待预约开始...');
-    await waitUntilBookAvailable();
+    // await waitUntilBookAvailable();
 
     console.log('预约开始了');
     const booker = new Booker({
-        goal: 2,
+        goal: 1,
+        // periodRanking: Period.getIdsFromNames([
+        //     '15:00-16:00', '16:00-17:00', '17:00-18:00', '15:30-16:00',
+        //     '19:00-20:00', '20:00-21:00', '18:00-19:00'
+        // ]),
         periodRanking: Period.getIdsFromNames([
-            '15:00-16:00', '16:00-17:00', '17:00-18:00', '15:30-16:00',
-            '19:00-20:00', '20:00-21:00', '18:00-19:00'
+            '17:00-18:00', '18:00-19:00', '15:30-16:00',
+            '19:00-20:00', '20:00-21:00'
         ]),
         groundRanking: Ground.getIdsFromNames([
             '三牌楼3号', '三牌楼4号', '三牌楼2号',
@@ -41,6 +45,7 @@ async function main() {
             );
         },
     });
+    booker.book();
 }
 
 main();
