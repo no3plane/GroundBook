@@ -1,111 +1,139 @@
 import { Session } from '../Session.js';
-import { getPeriods } from '../../api/getPeriods.js';
-import { getStadiums } from '../../api/getStadiums.js';
 import { Account } from '../Account.js';
 import { PublicLogManager } from '../PublicLogManager.js';
-import { Allocator, AllocatorFailResult } from '../Allocator.js';
+import { Allocator } from '../Allocator.js';
 import { getToken } from '../../api/Utils.js';
+import { Period } from '../../responseEntity/Period.js';
+import { prefered as thePreferedPeriods } from './periodsTest.js';
+import { prefered as thePreferedStadiums } from './stadiumsTest.js';
 
-(async function () {
-    const account1 = new Account('a1', getToken());
-    const account2 = new Account('a2', 'token2');
-    const account3 = new Account('a3', 'token3');
-    const validAccount = account1;
-    const accounts = [account1, account2, account3];
+const account1 = new Account('a1', getToken());
+// const account2 = new Account('a2', 'hfoweihfjeow');
+// const account3 = new Account('a3', 'gh430h04');
+const accounts = [account1];
 
-    // GET Periods Stadiums
-    // TODO 这里的结果应该经过优先级排序
-    const periodsRes = await getPeriods(validAccount.token);
-    const stadiumsRes = await getStadiums(validAccount.token);
-    if (!periodsRes.success || !stadiumsRes.success) {
+const preferedPeriods = thePreferedPeriods;
+const preferedStadiums = thePreferedStadiums;
+
+main(accounts, preferedPeriods, preferedStadiums);
+
+async function main(accounts: Account[], preferedPeriods: Period[], preferedStadiums: Stadium[]) {
+    // 筛出可用的 Account
+    const validAccounts = await filterValidAccounts(accounts);
+    if (validAccounts.length === 0) {
+        sendMessage('err', '不存在有效的Token');
         return;
     }
-    const periods = periodsRes.data;
-    const stadiums = stadiumsRes.data.filter((stadium) => {
-        return stadium.name.includes('三牌楼');
-    });
 
-    // UPDATE publicLogManager
-    await PublicLogManager.initInstance(validAccount);
-    const publicLogManager = PublicLogManager.getInstance();
-    if (!publicLogManager) {
+    // 更新一便场次信息
+    try {
+        await updatePublicLogManager(validAccounts[0], preferedPeriods);
+    } catch (error) {
+        sendMessage('err', error);
         return;
     }
-    for (const period of periods) {
-        await publicLogManager.update(period.id);
-    }
 
-    // CREATE the sessionAllocators
-    const allocators = periods.map((period) => {
-        const samePeriodSessions = stadiums.map((stadium) => {
+    // 创建分配器
+    const allocators = preferedPeriods.map((period) => {
+        const samePeriodSessions = preferedStadiums.map((stadium) => {
             return new Session(period, stadium);
         });
         return new Allocator(2, samePeriodSessions);
     });
 
-    // START async task
     for (const account of accounts) {
         run(account, allocators);
     }
-
-    // THE ASYNC TASK
-    // TODO 何时更新PublicLogManager一直没有想清楚
-    async function run(account: Account, allocators: Allocator[]) {
-        while (true) {
-            const allocateFailResults: AllocatorFailResult[] = [];
-
-            for (const allocator of allocators) {
-                const allocateResult = allocator.allocate();
-                if (allocateResult.success) {
-                    const session = allocateResult.session;
-                    const bookResult = await session.book(account);
-                    console.log('完成一次预约尝试', bookResult);
-                } else {
-                    allocateFailResults.push(allocateResult);
-                }
-            }
-
-            // IF accout invalid
-            if (account.remainTime === 0) {
-                return;
-            }
-
-            // IF has chance
-            let stillHasChance = true;
-            if (allocateFailResults.length === allocators.length) {
-                // 表示拿不到 session
-                let i = 0;
-                for (i = 0; i < allocateFailResults.length; i++) {
-                    const result = allocateFailResults[i];
-                    if (result.allocatedCount + result.bookingCount > 0) {
-                        break;
-                    }
-                }
-                if (i === allocateFailResults.length) {
-                    stillHasChance = false;
-                }
-            }
-
-            // has no chance
-            if (!stillHasChance) {
-                return;
-            }
-
-            // has chance
-            // TODO 为防止以外，当然也不能因为有可能就一直尝试，应设置一个MaxTry
-            if (allocateFailResults.length === allocators.length) {
-                // 拿不到 session，所有之后没有机会发送预约请求，只需要 sleep 50ms
-                await sleep(50);
-            } else {
-                // 拿到 session，就说明之后发送了预约请求，需要 sleep 2000ms
-                await sleep(2000);
-            }
-        }
-    }
-})();
-
+}
 function sleep(ms: number) {
     return new Promise((resolve) => {
         setTimeout(resolve, ms);
     });
+}
+
+async function filterValidAccounts(accounts: Account[]) {
+    const validAccounts: Account[] = [];
+    for (const account of accounts) {
+        if (!(await account.isValid())) {
+            sendMessage('accountInvalid', account);
+            continue;
+        }
+        validAccounts.push(account);
+    }
+    return validAccounts;
+}
+
+async function updatePublicLogManager(account: Account, periods: Period[]) {
+    await PublicLogManager.initInstance(account);
+    const publicLogManager = PublicLogManager.getInstance();
+    if (!publicLogManager) {
+        throw '获取publicLogManager失败';
+    }
+    for (const period of periods) {
+        if (!(await publicLogManager.update(period.id))) {
+            throw '无法获取publicLog数据';
+        }
+    }
+}
+
+// THE ASYNC TASK
+// TODO 何时更新PublicLogManager一直没有想清楚
+async function run(account: Account, allocators: Allocator[]) {
+    const MAX_TRY = 10;
+    for (let i = 0; i < MAX_TRY; i++) {
+        let hasSessionHandling = false;
+        let allocateSuccess = false;
+
+        for (const allocator of allocators) {
+            const allocateResult = allocator.allocate();
+            if (allocateResult.success) {
+                allocateSuccess = true;
+                sendMessage('allocatedSuccess', {
+                    account: account,
+                    session: allocateResult.session,
+                });
+                const bookResult = await allocateResult.session.book(account);
+                if (bookResult) {
+                    sendMessage('bookSuccess', {
+                        account: account,
+                        bookResult: bookResult,
+                    });
+                }
+                break;
+            } else {
+                if (allocateResult.allocatedCount + allocateResult.bookingCount > 0) {
+                    hasSessionHandling = true;
+                }
+            }
+        }
+
+        if (account.remainTime === 0) {
+            sendMessage('hasNoRemainTime', account);
+            return;
+        }
+        if (account.isConcurrencyLimited) {
+            sendMessage('concurrencyLimited', account);
+            return;
+        }
+
+        if (!allocateSuccess && !hasSessionHandling) {
+            sendMessage('allSessionBooked', account);
+            return;
+        }
+
+        // TODO 为防止以外，当然也不能因为有可能就一直尝试，应设置一个MaxTry
+        if (!allocateSuccess && hasSessionHandling) {
+            await sleep(50);
+        }
+
+        if (allocateSuccess) {
+            PublicLogManager.getInstance()?.updateCacheds();
+            await sleep(2000);
+        }
+    }
+    sendMessage('FailTooManyTime', account);
+}
+
+async function sendMessage(type: string, message: any) {
+    console.log(type, message);
 }

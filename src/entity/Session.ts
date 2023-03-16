@@ -1,4 +1,5 @@
 import { sendReservation } from '../api/sendReservation.js';
+import { checkPeriodOpen, Period } from '../responseEntity/Period.js';
 import { Account } from './Account.js';
 import { PublicLogManager } from './PublicLogManager.js';
 import { Result } from './Result.js';
@@ -9,6 +10,7 @@ export const enum SessionStatus {
     booking, // 预约中
     bookedByMe, // 预约成功（终态）
     bookedByOthers, // 不可能预约成功（如已经被别人预约）（终态）
+    unOpen, // 今天这个时间段不开放，所以这个场次不开放
 }
 
 export class Session {
@@ -21,13 +23,18 @@ export class Session {
         this.period = period;
         this.stadium = stadium;
         this.bookResults = [];
-        this._status = SessionStatus.waitting;
+        if (checkPeriodOpen(period)) {
+            this._status = SessionStatus.waitting;
+        } else {
+            this._status = SessionStatus.unOpen;
+        }
     }
 
     get status() {
         if (
             this._status === SessionStatus.bookedByMe ||
-            this._status === SessionStatus.bookedByOthers
+            this._status === SessionStatus.bookedByOthers ||
+            this._status === SessionStatus.unOpen
         ) {
             return this._status;
         }
@@ -53,8 +60,8 @@ export class Session {
                 this._status = newStatus;
                 break;
             case SessionStatus.bookedByMe:
-                return;
             case SessionStatus.bookedByOthers:
+            case SessionStatus.unOpen:
                 return;
             default:
                 break;
@@ -95,11 +102,10 @@ export class Session {
 
         // 失败
         this.status = SessionStatus.waitting;
-        switch (res.errMsg) {
-            case '请重新进入以解限':
-                // TODO 不记得这个信息对不对
-                account.remainTime = 0;
-                break;
+        if (res.errMsg.includes('秒后重试')) {
+            account.isConcurrencyLimited = true;
+        } else if (res.errMsg.includes('请重新进入以解限')) {
+            account.remainTime = 0;
         }
         return record;
     }

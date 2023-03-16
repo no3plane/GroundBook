@@ -11,17 +11,19 @@ export class PublicLogManager {
     private logs: Map<number, PublicLog>; // key = periodId * 1000 + stadiumId
     private account: Account; // 用它的Token来发起请求获取Logs
     private static instance: PublicLogManager;
+    private periodIdCache: Set<number>;
 
     constructor(account: Account) {
         this.logs = new Map();
         this.account = account;
+        this.periodIdCache = new Set();
         if (PublicLogManager.instance) {
             return PublicLogManager.instance;
         }
     }
 
     static async initInstance(account: Account) {
-        if (await account.isExpired()) {
+        if (!(await account.isValid())) {
             return false;
         }
         PublicLogManager.instance = new PublicLogManager(account);
@@ -36,20 +38,35 @@ export class PublicLogManager {
     }
 
     async update(periodId: number) {
+        this.periodIdCache.add(periodId);
         const res = await getPublicLogs(this.account.token, new Date(), periodId);
         if (!res.success) {
-            return;
+            return false;
         }
-        for (const rawLog of res.data) {
-            if (!rawLog.log) {
+        for (const rawData of res.data) {
+            if (!rawData.log) {
                 continue;
             }
-            const key = this.computeLogKey(rawLog.log.periodId, rawLog.log.stadiumId);
-            if (this.logs.has(key)) {
+            const key = this.computeLogKey(rawData.log.periodId, rawData.log.stadiumId);
+            if (!this.logs.has(key)) {
                 continue;
             }
-            this.logs.set(key, rawLog.log);
+            this.logs.set(key, rawData.log);
         }
+        return true;
+    }
+
+    // TODO 不知道写的对不对
+    async updateCacheds() {
+        const periodIds = [...this.periodIdCache.values()];
+        const updatePromises = periodIds.map((periodId) => this.update(periodId));
+        const results = await Promise.all(updatePromises);
+        for (const result of results) {
+            if (!result) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
